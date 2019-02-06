@@ -8,18 +8,22 @@ import matplotlib.pyplot as plt
 
 class Ising(object):
     """docstring for ."""
-    def __init__(self, N,p,T):
+    def __init__(self, N,p,T,dynamics):
         self.N = N
         self.p = p
         self.spins = np.random.choice(a=[-1,1], size=(N, N), p=[p, 1-p])
         self.T = T
+        if dynamics == 'G' or 'Glauber':
+            self.dynamic = self.Gflip
+        if dynamics == 'K' or 'Kawasaki':
+            self.dynamic = self.Kflip
 
     def getEnergyChange(self,pos):
         NNSpins = self.spins[(pos[0]+1)%self.N,pos[1]]+self.spins[pos[0],(pos[1]+1)%self.N]+self.spins[(pos[0]-1)%self.N,pos[1]]+self.spins[pos[0],(pos[1]-1)%self.N]
         dE = 2*self.spins[pos[0],pos[1]]*NNSpins
         return dE
 
-    def flip(self):
+    def Gflip(self):
         x = np.random.randint(0,self.N)
         y = np.random.randint(0,self.N)
         E = self.getEnergyChange([x,y])
@@ -32,10 +36,34 @@ class Ising(object):
         else:
             return 0
 
+
+    def Kflip(self):
+        x1,y1,y2,x2=0,0,0,0
+        while not(x1==x2 and y1==y2) and not(self.spins[x1,y1]== self.spins[x2,y2]):
+            x1 = np.random.randint(0,self.N)
+            y1 = np.random.randint(0,self.N)
+            x2 = np.random.randint(0,self.N)
+            y2 = np.random.randint(0,self.N)
+
+        E1 = self.getEnergyChange([x1,y1])
+        E2 = self.getEnergyChange([x2,y2])
+        E = E1+E2
+
+        if (abs(x1-x2)==1 or abs(y1-y2)==1 or (x1+x2)%self.N == 1 or (y1+y2)%self.N==1):
+            E = 4
+
+        if E<=0:
+            self.spins[x1,y1] = self.spins[x2,y2]
+            return E
+        elif np.random.uniform(0,1)< np.exp(-E/self.T):
+            self.spins[x2,y2] = self.spins[x1,y1]
+            return E
+        else:
+            return 0
     def sweep(self):
         dE = 0
         for i in range(0,self.N**2):
-            dE += self.flip()
+            dE += self.dynamic()
         return dE
 
     def totalEnergy(self):
@@ -65,16 +93,17 @@ class Ising(object):
             self.sweep()
             Es[i] = self.totalEnergy()
             Ms[i] = self.totalM()
-            Et += Es[i]
-            Mt += Ms[i]
-            E2 += Es[i]**2
-            M2 += Ms[i]**2
-            if i%50 == 0 & animate==True:
+            # Et += Es[i]
+            # Mt += Ms[i]
+            # E2 += Es[i]**2
+            # M2 += Ms[i]**2
+            if i%5 == 0 and animate==True:
                 plt.imshow(self.spins)
                 plt.pause(0.005)
 
         if animate==True:
             plt.show()
+
         C = np.var(Es)/(self.N**2*self.T**2)
         X = np.var(Ms)/(self.N**2*self.T)
         E = np.mean(Es)
@@ -88,13 +117,12 @@ class Ising(object):
 
     def __str__(self):
         p =np.empty([np.shape(self.spins)[0],np.shape(self.spins)[1]],dtype=np.str)
-        #print(p)
         p[self.spins==-1]="1"
         p[self.spins==1]="0"
         return(np.array2string(p))
 
     @staticmethod
-    def experiment(N,p,n):
+    def experiment(N,p,n,method='G'):
 
         temps = np.linspace(1,3,n)
         Cs = np.zeros(n)
@@ -104,8 +132,8 @@ class Ising(object):
         Et = 0
         Mt = 0
         for i in range(0,n):
-            I = Ising(N,p,temps[i])
-            [C,X,E,M,Et,Mt,E2,M2] = I.simulate(10000)
+            I = Ising(N,p,temps[i],method)
+            [C,X,E,M,Et,Mt,E2,M2] = I.simulate(10000,method)
 
             Es[i] = E
             Ms[i] = M
@@ -156,10 +184,10 @@ class Ising(object):
 
 
 def main():
-    I = Ising(10,0.5,1)
-    Ising.experiment(20,0.99,20)
+    I = Ising(5,0.5,1,'K')
+    #Ising.experiment(10,0.99,5,'K')
     Ising.plots()
-    #for i in range(0,1):
-        #I.simulate(10000,True)
-#
+    for i in range(0,1):
+        I.simulate(100,True)
+
 main()
