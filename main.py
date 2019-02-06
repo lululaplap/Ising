@@ -20,8 +20,8 @@ class Ising(object):
         return dE
 
     def flip(self):
-        x = np.random.randint(0,self.N-1)
-        y = np.random.randint(0,self.N-1)
+        x = np.random.randint(0,self.N)
+        y = np.random.randint(0,self.N)
         E = self.getEnergyChange([x,y])
         if E<=0:
             self.spins[x,y]*=-1
@@ -39,13 +39,18 @@ class Ising(object):
         return dE
     def totalEnergy(self):
         E= 0
-        for i in range(self.N-1):
-            for j in range(self.N-1):
+        for i in range(self.N):
+            for j in range(self.N):
                 pos = [i,j]
                 E += -1*self.spins[i,j]*self.spins[(pos[0]+1)%self.N,pos[1]]+self.spins[pos[0],(pos[1]+1)%self.N]+self.spins[(pos[0]-1)%self.N,pos[1]]+self.spins[pos[0],(pos[1]-1)%self.N]
-        return E
+        return E/4
 
-    def simulate(self,n):
+    def equ(self,equN):
+        for i in range(0,equN):
+            self.sweep()
+
+    def simulate(self,n,animate=False):
+        self.equ(1000)
         Es = np.zeros(n,dtype=float)
         Es[0] = self.totalEnergy()
         Ms = np.zeros(n,dtype=float)
@@ -53,14 +58,21 @@ class Ising(object):
         for i in range(1,n):
             Es[i] = self.sweep()+Es[i-1]
             Ms[i] = self.totalM()
-            if i%1000000 == 0:
+            if i%50 == 0 & animate==True:
                 plt.imshow(self.spins)
-                plt.show()
+                plt.pause(0.005)
 
-        plt.plot(Es)
-        plt.show()
-        plt.plot(Ms)
-        plt.show()
+        if animate:
+            plt.show()
+        C = np.var(Es)/(self.N**2*self.T**2)
+        X = np.var(Ms)/(self.N*self.T)
+        E = np.mean(Es)
+        M=np.mean(Ms)
+        return [C,X,E,M]
+        #plt.plot(Es)
+        #plt.show()
+        #plt.plot(Ms)
+        #plt.show()
 
 
     def totalM(self):
@@ -73,9 +85,28 @@ class Ising(object):
         p[self.spins==1]="0"
         return(np.array2string(p))
 
+    @staticmethod
+    def experiment(N,p,n):
+
+        temps = np.linspace(1,3,n)
+        Cs = np.zeros(n)
+        Xs = np.zeros(n)
+        Es = np.zeros(n)
+        Ms = np.zeros(n)
+        for i in range(0,n):
+            I = Ising(N,p,temps[i])
+            [C,X,E,M] = I.simulate(10000)
+
+            Cs[i] = C
+            Xs[i] = X
+            Es[i] = E
+            Ms[i] = M
+        plt.plot(temps,Cs)
+        plt.show()
 def main():
-    I = Ising(100,0.5,10000)
-    for i in range(0,1):
-        I.simulate(1000)
+    I = Ising(100,0.5,1)
+    Ising.experiment(30,0.5,30)
+    #for i in range(0,1):
+    #    I.simulate(10000)
 
 main()
