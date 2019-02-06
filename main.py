@@ -79,7 +79,7 @@ class Ising(object):
             self.sweep()
 
     def simulate(self,n,animate=False):
-        self.equ(100)
+        #self.equ(100)
         print(self.T)
         Es = np.zeros(n,dtype=float)
         Es[0] = self.totalEnergy()
@@ -91,18 +91,20 @@ class Ising(object):
         M2 = 0
         for i in range(1,n):
             self.sweep()
+
             Es[i] = self.totalEnergy()
             Ms[i] = self.totalM()
             # Et += Es[i]
             # Mt += Ms[i]
             # E2 += Es[i]**2
             # M2 += Ms[i]**2
-            if i%5 == 0 and animate==True:
-                plt.imshow(self.spins)
-                plt.pause(0.005)
+            #if i%5 == 0: #and animate==True:
+                #print(i)
+            plt.imshow(self.spins)
+            plt.pause(0.005)
 
-        if animate==True:
-            plt.show()
+        #if animate==True:
+        plt.show()
 
         C = np.var(Es)/(self.N**2*self.T**2)
         X = np.var(Ms)/(self.N**2*self.T)
@@ -184,10 +186,10 @@ class Ising(object):
 
 
 def main():
-    I = Ising(5,0.5,1,'K')
+    I = Ising(20,0.5,1,'G')
     #Ising.experiment(10,0.99,5,'K')
-    Ising.plots()
-    for i in range(0,1):
-        I.simulate(100,True)
+    #Ising.plots()
+    
+    I.simulate(100,True)
 
 main()
