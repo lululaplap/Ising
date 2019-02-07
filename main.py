@@ -8,62 +8,66 @@ import matplotlib.pyplot as plt
 
 class Ising(object):
     """docstring for ."""
-    def __init__(self, N,p,T,dynamics):
+    def __init__(self, N,p,T):
         self.N = N
         self.p = p
         self.spins = np.random.choice(a=[-1,1], size=(N, N), p=[p, 1-p])
         self.T = T
-        if dynamics == 'G' or 'Glauber':
-            self.dynamic = self.Gflip
-        if dynamics == 'K' or 'Kawasaki':
-            self.dynamic = self.Kflip
+
+
 
     def getEnergyChange(self,pos):
         NNSpins = self.spins[(pos[0]+1)%self.N,pos[1]]+self.spins[pos[0],(pos[1]+1)%self.N]+self.spins[(pos[0]-1)%self.N,pos[1]]+self.spins[pos[0],(pos[1]-1)%self.N]
         dE = 2*self.spins[pos[0],pos[1]]*NNSpins
         return dE
 
-    def Gflip(self):
-        x = np.random.randint(0,self.N)
-        y = np.random.randint(0,self.N)
-        E = self.getEnergyChange([x,y])
-        if E<=0:
-            self.spins[x,y]*=-1
-            return E
-        elif np.random.uniform(0,1)< np.exp(-E/self.T):
-            self.spins[x,y]*=-1
-            return E
-        else:
-            return 0
+    # def Gflip(self):
+    #     print("hello")
+    #     x = np.random.randint(0,self.N)
+    #     y = np.random.randint(0,self.N)
+    #     E = self.getEnergyChange([x,y])
+    #     if E<=0:
+    #         self.spins[x,y]*=-1
+    #         return E
+    #     elif np.random.uniform(0,1)< np.exp(-E/self.T):
+    #         self.spins[x,y]*=-1
+    #         return E
+    #     else:
+    #         return 0
 
 
-    def Kflip(self):
-        x1,y1,y2,x2=0,0,0,0
-        while not(x1==x2 and y1==y2) and not(self.spins[x1,y1]== self.spins[x2,y2]):
-            x1 = np.random.randint(0,self.N)
-            y1 = np.random.randint(0,self.N)
-            x2 = np.random.randint(0,self.N)
-            y2 = np.random.randint(0,self.N)
+    # def Kflip(self):
+    #     x1,y1,y2,x2=0,0,0,0
+    #     while not(x1==x2 and y1==y2) and not(self.spins[x1,y1]== self.spins[x2,y2]):
+    #         x1 = np.random.randint(0,self.N)
+    #         y1 = np.random.randint(0,self.N)
+    #         x2 = np.random.randint(0,self.N)
+    #         y2 = np.random.randint(0,self.N)
+    #
+    #     E1 = self.getEnergyChange([x1,y1])
+    #     E2 = self.getEnergyChange([x2,y2])
+    #     E = E1+E2
+    #
+    #     if (abs(x1-x2)==1 or abs(y1-y2)==1 or (x1+x2)%self.N == 1 or (y1+y2)%self.N==1):
+    #         E = 4
+    #
+    #     if E<=0:
+    #         self.spins[x1,y1] = self.spins[x2,y2]
+    #         return E
+    #     elif np.random.uniform(0,1)< np.exp(-E/self.T):
+    #         self.spins[x2,y2] = self.spins[x1,y1]
+    #         return E
+    #     else:
+    #         return 0
+    def flip(self):
+        pass
 
-        E1 = self.getEnergyChange([x1,y1])
-        E2 = self.getEnergyChange([x2,y2])
-        E = E1+E2
 
-        if (abs(x1-x2)==1 or abs(y1-y2)==1 or (x1+x2)%self.N == 1 or (y1+y2)%self.N==1):
-            E = 4
-
-        if E<=0:
-            self.spins[x1,y1] = self.spins[x2,y2]
-            return E
-        elif np.random.uniform(0,1)< np.exp(-E/self.T):
-            self.spins[x2,y2] = self.spins[x1,y1]
-            return E
-        else:
-            return 0
     def sweep(self):
         dE = 0
         for i in range(0,self.N**2):
-            dE += self.dynamic()
+            dE += self.flip()
+
         return dE
 
     def totalEnergy(self):
@@ -79,7 +83,7 @@ class Ising(object):
             self.sweep()
 
     def simulate(self,n,animate=False):
-        #self.equ(100)
+        self.equ(100)
         print(self.T)
         Es = np.zeros(n,dtype=float)
         Es[0] = self.totalEnergy()
@@ -91,17 +95,16 @@ class Ising(object):
         M2 = 0
         for i in range(1,n):
             self.sweep()
-
             Es[i] = self.totalEnergy()
             Ms[i] = self.totalM()
-            # Et += Es[i]
-            # Mt += Ms[i]
-            # E2 += Es[i]**2
-            # M2 += Ms[i]**2
-            #if i%5 == 0: #and animate==True:
+            Et += Es[i]
+            Mt += Ms[i]
+            E2 += Es[i]**2
+            M2 += Ms[i]**2
+            if i%5 == 0 and animate==True:
                 #print(i)
-            plt.imshow(self.spins)
-            plt.pause(0.005)
+                plt.imshow(self.spins)
+                plt.pause(0.005)
 
         #if animate==True:
         plt.show()
@@ -109,7 +112,7 @@ class Ising(object):
         C = np.var(Es)/(self.N**2*self.T**2)
         X = np.var(Ms)/(self.N**2*self.T)
         E = np.mean(Es)
-        M=np.mean(Ms)
+        M=  np.mean(Ms)
         return [C,X,E,M,Et,Mt,E2,M2]
 
 
@@ -123,10 +126,10 @@ class Ising(object):
         p[self.spins==1]="0"
         return(np.array2string(p))
 
-    @staticmethod
-    def experiment(N,p,n,method='G'):
+    @classmethod
+    def experiment(cls,N,p,n):
 
-        temps = np.linspace(1,3,n)
+        temps = np.linspace(1.5,3,n)
         Cs = np.zeros(n)
         Xs = np.zeros(n)
         Es = np.zeros(n)
@@ -134,13 +137,17 @@ class Ising(object):
         Et = 0
         Mt = 0
         for i in range(0,n):
-            I = Ising(N,p,temps[i],method)
-            [C,X,E,M,Et,Mt,E2,M2] = I.simulate(10000,method)
-
+            # if method == 'G' or 'Glauber':
+            #     I = Glauber(N,p,temps[i])
+            # elif method == 'K' or 'Kawasaki':
+            #     I = Kawasaki(N,p,temps[i])
+            I = cls(N,p,temps[i])
+            C,X,E,M,Et,Mt,E2,M2 = I.simulate(10000)
             Es[i] = E
             Ms[i] = M
             Cs[i] = C#E2-Et*2
             Xs[i] = X#M2-Mt*2
+        plt.plot(Cs)
 
         np.savetxt('heatcapacity.csv',Cs,delimiter=',')
         np.savetxt('energy.csv',Es,delimiter=',')
@@ -183,13 +190,57 @@ class Ising(object):
 
         plt.show()
 
+class Glauber(Ising):
+    def __init__(self,N,p,T):
+        Ising.__init__(self,N,p,T)
+        print(type(self))
+    def flip(self):
+        x = np.random.randint(0,self.N)
+        y = np.random.randint(0,self.N)
+        E = self.getEnergyChange([x,y])
+        if E<=0:
+            self.spins[x,y]*=-1
+            return E
+        elif np.random.uniform(0,1)< np.exp(-E/self.T):
+            self.spins[x,y]*=-1
+            return E
+        else:
+            return 0
 
 
+class Kawasaki(Ising):
+    def __init__(self,N,p,T):
+        Ising.__init__(self,N,p,T)
+        print(type(self))
+    def flip(self):
+        x1,y1,y2,x2=0,0,0,0
+        while not(x1==x2 and y1==y2) and not(self.spins[x1,y1]== self.spins[x2,y2]):
+            x1 = np.random.randint(0,self.N)
+            y1 = np.random.randint(0,self.N)
+            x2 = np.random.randint(0,self.N)
+            y2 = np.random.randint(0,self.N)
+
+        E1 = self.getEnergyChange([x1,y1])
+        E2 = self.getEnergyChange([x2,y2])
+        E = E1+E2
+
+        if (abs(x1-x2)==1 or abs(y1-y2)==1 or (x1+x2)%self.N == 1 or (y1+y2)%self.N==1):
+            E += 4
+
+        if E<=0:
+            self.spins[x1,y1] = self.spins[x2,y2]
+            return E
+        elif np.random.uniform(0,1)< np.exp(-E/self.T):
+            self.spins[x2,y2] = self.spins[x1,y1]
+            return E
+        else:
+            return 0
 def main():
-    I = Ising(20,0.5,1,'G')
-    #Ising.experiment(10,0.99,5,'K')
-    #Ising.plots()
-    
-    I.simulate(100,True)
+    #I = Glauber(10,0.5,1)
+    #I = Kawasaki(20,0.5,10)
+    Kawasaki.experiment(5,0.99,20)
+    Ising.plots()
+
+    #I.simulate(10000,True)
 
 main()
