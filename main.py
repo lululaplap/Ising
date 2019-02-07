@@ -9,10 +9,15 @@ import time
 
 class Ising(object):
     """docstring for ."""
-    def __init__(self, N,p,T):
+    def __init__(self, N,p,T,config='random'):
         self.N = N
         self.p = p
-        self.spins = np.random.choice(a=[-1,1], size=(N, N), p=[p, 1-p])
+        if type(config) == 'numpy.ndarray':
+            self.spins = config
+        elif config == 'random':
+            self.spins = np.random.choice(a=[-1,1], size=(N, N), p=[p, 1-p])
+
+        self.spins = config
         self.T = T
 
 
@@ -148,7 +153,7 @@ class Ising(object):
             Ms[i] = M
             Cs[i] = C#E2-Et*2
             Xs[i] = X#M2-Mt*2
-        plt.plot(Cs)
+        plt.plot(Ms)
 
         np.savetxt('heatcapacity.csv',Cs,delimiter=',')
         np.savetxt('energy.csv',Es,delimiter=',')
@@ -156,8 +161,8 @@ class Ising(object):
         np.savetxt('mag.csv',Ms,delimiter=',')
         np.savetxt('magsep.csv',Xs,delimiter=',')
 
-    @staticmethod
-    def plots():
+    @classmethod
+    def plots(cls):
         C = np.genfromtxt('heatcapacity.csv', delimiter=",")
         E = np.genfromtxt('energy.csv', delimiter=",")
         T = np.genfromtxt('temperatures.csv', delimiter=",")
@@ -190,6 +195,7 @@ class Ising(object):
         plt.ylabel("Susceptibility", fontsize=20);         plt.axis('tight');
 
         plt.show()
+        plt.savefig('{}.png'.format(cls))
 
 class Glauber(Ising):
     def __init__(self,N,p,T):
@@ -209,11 +215,19 @@ class Glauber(Ising):
 
 
 class Kawasaki(Ising):
-    def __init__(self,N,p,T):
-        Ising.__init__(self,N,p,T)
+    def __init__(self,N,p,T,config='default'):
+        if config =='default':
+            config = np.arange(N*N).reshape((N,N))
+            print(np.shape(config))
+            config[np.where(config<N*N/2)] = -1
+            config[np.where(config>=N*N/2)] = +1
+        else:
+            config='random'
+
+        Ising.__init__(self,N,p,T,config)
 
     def flip(self):
-        #x1,y1,y2,x2=0,0,0,0
+
         x1 = np.random.randint(0,self.N)
         y1 = np.random.randint(0,self.N)
         x2 = np.random.randint(0,self.N)
@@ -221,9 +235,7 @@ class Kawasaki(Ising):
         M = self.totalM()
 
         if self.spins[x1,y1]== self.spins[x2,y2]:#checks if the spins are the same, returns 0 if so
-            print("the same")
             return 0
-
 
         else:#if spins not the same
             E1 = self.getEnergyChange([x1,y1])
@@ -232,38 +244,29 @@ class Kawasaki(Ising):
 
         S1 = self.spins[x1,y1]
         S2 = self.spins[x2,y2]
-        print(S1+S2)
-        if (abs(x1-x2)==1 or abs(y1-y2)==1 or (x1+x2)%self.N == 1 or (y1+y2)%self.N==1):
-            print("NN")
-            E -= 1
 
+        if (abs(x1-x2)==1 or abs(y1-y2)==1 or (x1+x2)%self.N == 1 or (y1+y2)%self.N==1):
+            E -= 1
         if E<=0:
 
             self.spins[x1,y1] = S2
             self.spins[x2,y2] = S1
-            if M!=self.totalM:
-                print(S1+S2)
-                print("Error: M changed 1")
-                quit()
 
             return E
         elif np.random.uniform(0,1)< np.exp(-E/self.T):
             self.spins[x1,y1] = S2
             self.spins[x2,y2] = S1
-            if M!=self.totalM:
-                print("Error: M changed 2")
-                quit()
-
 
             return E
         else:
             return 0
 def main():
     #I = Glauber(10,0.5,1)
-    #I = Kawasaki(20,0.5,10)
+    #I = Kawasaki(50,0.5,0.0001)
     Kawasaki.experiment(10,0.5,20)
-    Ising.plots()
-
-    #I.simulate(10000,True)
+    Kawasaki.plots()
+    #Glauber.experiment(10,0.5,20)
+    #Glauber.plots()
+    I.simulate(10000,True)
 
 main()
