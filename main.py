@@ -81,8 +81,8 @@ class Ising(object):
         for i in range(self.N):
             for j in range(self.N):
                 pos = [i,j]
-                E += -1*self.spins[i,j]*self.spins[(pos[0]+1)%self.N,pos[1]]+self.spins[pos[0],(pos[1]+1)%self.N]+self.spins[(pos[0]-1)%self.N,pos[1]]+self.spins[pos[0],(pos[1]-1)%self.N]
-        return E/4
+                E += self.spins[i,j]*(self.spins[(pos[0]+1)%self.N,pos[1]]+self.spins[pos[0],(pos[1]+1)%self.N]+self.spins[(pos[0]-1)%self.N,pos[1]]+self.spins[pos[0],(pos[1]-1)%self.N])
+        return -1*E/4
 
     def equ(self,equN):
         for i in range(0,equN):
@@ -129,7 +129,7 @@ class Ising(object):
     def __str__(self):
         p =np.empty([np.shape(self.spins)[0],np.shape(self.spins)[1]],dtype=np.str)
         p[self.spins==-1]="1"
-        p[self.spins==1]="0"
+        p[self.spins==1]="-1"
         return(np.array2string(p))
 
     @classmethod
@@ -198,13 +198,17 @@ class Ising(object):
         plt.savefig('{}.png'.format(cls))
 
 class Glauber(Ising):
-    def __init__(self,N,p,T):
-        Ising.__init__(self,N,p,T)
+    def __init__(self,N,p,T,config='default'):
+        if config =='default':
+            config = np.ones(N*N).reshape((N,N))
+        else:
+            config='random'
+        Ising.__init__(self,N,p,T,config)
     def flip(self):
         x = np.random.randint(0,self.N)
         y = np.random.randint(0,self.N)
         E = self.getEnergyChange([x,y])
-        if E<=0:
+        if E<0:
             self.spins[x,y]*=-1
             return E
         elif np.random.uniform(0,1)< np.exp(-E/self.T):
@@ -218,7 +222,6 @@ class Kawasaki(Ising):
     def __init__(self,N,p,T,config='default'):
         if config =='default':
             config = np.arange(N*N).reshape((N,N))
-            print(np.shape(config))
             config[np.where(config<N*N/2)] = -1
             config[np.where(config>=N*N/2)] = +1
         else:
@@ -232,7 +235,6 @@ class Kawasaki(Ising):
         y1 = np.random.randint(0,self.N)
         x2 = np.random.randint(0,self.N)
         y2 = np.random.randint(0,self.N)
-        M = self.totalM()
 
         if self.spins[x1,y1]== self.spins[x2,y2]:#checks if the spins are the same, returns 0 if so
             return 0
@@ -247,11 +249,9 @@ class Kawasaki(Ising):
 
         if (abs(x1-x2)==1 or abs(y1-y2)==1 or (x1+x2)%self.N == 1 or (y1+y2)%self.N==1):
             E -= 1
-        if E<=0:
-
+        if E<0:
             self.spins[x1,y1] = S2
             self.spins[x2,y2] = S1
-
             return E
         elif np.random.uniform(0,1)< np.exp(-E/self.T):
             self.spins[x1,y1] = S2
@@ -262,11 +262,14 @@ class Kawasaki(Ising):
             return 0
 def main():
     #I = Glauber(10,0.5,1)
-    #I = Kawasaki(50,0.5,0.0001)
-    Kawasaki.experiment(10,0.5,20)
-    Kawasaki.plots()
-    #Glauber.experiment(10,0.5,20)
-    #Glauber.plots()
-    I.simulate(10000,True)
+    #I = Kawasaki(50,0.5,10)
+    #I.simulate(10000,True)
+
+    #Kawasaki.experiment(50,0.5,20)
+    #Kawasaki.plots()
+
+    Glauber.experiment(10,0.5,20)
+    Glauber.plots()
+
 
 main()
