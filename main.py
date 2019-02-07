@@ -4,6 +4,7 @@
 import numpy as np
 from itertools import permutations
 import matplotlib.pyplot as plt
+import time
 
 
 class Ising(object):
@@ -193,7 +194,6 @@ class Ising(object):
 class Glauber(Ising):
     def __init__(self,N,p,T):
         Ising.__init__(self,N,p,T)
-        print(type(self))
     def flip(self):
         x = np.random.randint(0,self.N)
         y = np.random.randint(0,self.N)
@@ -211,34 +211,57 @@ class Glauber(Ising):
 class Kawasaki(Ising):
     def __init__(self,N,p,T):
         Ising.__init__(self,N,p,T)
-        print(type(self))
+
     def flip(self):
-        x1,y1,y2,x2=0,0,0,0
-        while not(x1==x2 and y1==y2) and not(self.spins[x1,y1]== self.spins[x2,y2]):
-            x1 = np.random.randint(0,self.N)
-            y1 = np.random.randint(0,self.N)
-            x2 = np.random.randint(0,self.N)
-            y2 = np.random.randint(0,self.N)
+        #x1,y1,y2,x2=0,0,0,0
+        x1 = np.random.randint(0,self.N)
+        y1 = np.random.randint(0,self.N)
+        x2 = np.random.randint(0,self.N)
+        y2 = np.random.randint(0,self.N)
+        M = self.totalM()
 
-        E1 = self.getEnergyChange([x1,y1])
-        E2 = self.getEnergyChange([x2,y2])
-        E = E1+E2
+        if self.spins[x1,y1]== self.spins[x2,y2]:#checks if the spins are the same, returns 0 if so
+            print("the same")
+            return 0
 
+
+        else:#if spins not the same
+            E1 = self.getEnergyChange([x1,y1])
+            E2 = self.getEnergyChange([x2,y2])
+            E = E1+E2
+
+        S1 = self.spins[x1,y1]
+        S2 = self.spins[x2,y2]
+        print(S1+S2)
         if (abs(x1-x2)==1 or abs(y1-y2)==1 or (x1+x2)%self.N == 1 or (y1+y2)%self.N==1):
-            E += 4
+            print("NN")
+            E -= 1
 
         if E<=0:
-            self.spins[x1,y1] = self.spins[x2,y2]
+
+            self.spins[x1,y1] = S2
+            self.spins[x2,y2] = S1
+            if M!=self.totalM:
+                print(S1+S2)
+                print("Error: M changed 1")
+                quit()
+
             return E
         elif np.random.uniform(0,1)< np.exp(-E/self.T):
-            self.spins[x2,y2] = self.spins[x1,y1]
+            self.spins[x1,y1] = S2
+            self.spins[x2,y2] = S1
+            if M!=self.totalM:
+                print("Error: M changed 2")
+                quit()
+
+
             return E
         else:
             return 0
 def main():
     #I = Glauber(10,0.5,1)
     #I = Kawasaki(20,0.5,10)
-    Kawasaki.experiment(5,0.99,20)
+    Kawasaki.experiment(10,0.5,20)
     Ising.plots()
 
     #I.simulate(10000,True)
