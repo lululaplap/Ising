@@ -5,6 +5,7 @@ import numpy as np
 from itertools import permutations
 import matplotlib.pyplot as plt
 import time
+import math
 
 
 class Ising(object):
@@ -91,7 +92,7 @@ class Ising(object):
     def simulate(self,n,animate=False):
         self.equ(100)
         print(self.T)
-        Es = np.zeros(n,dtype=float)
+        Es = np.zeros(n/10,dtype=float)
         Es[0] = self.totalEnergy()
         Ms = np.zeros(n,dtype=float)
         Ms[0] = self.totalM()
@@ -101,16 +102,17 @@ class Ising(object):
         M2 = 0
         for i in range(1,n):
             self.sweep()
-            Es[i] = self.totalEnergy()
-            Ms[i] = self.totalM()
-            Et += Es[i]
-            Mt += Ms[i]
-            E2 += Es[i]**2
-            M2 += Ms[i]**2
-            if i%5 == 0 and animate==True:
-                #print(i)
-                plt.imshow(self.spins)
-                plt.pause(0.005)
+            if i%10==0:
+                Es[i/10] = self.totalEnergy()
+                Ms[i/10] = self.totalM()
+                Et += Es[i/10]
+                Mt += Ms[i/10]
+                E2 += Es[i/10]**2
+                M2 += Ms[i/10]**2
+                if animate==True:
+                    #print(i)
+                    plt.imshow(self.spins)
+                    plt.pause(0.005)
 
         #if animate==True:
         plt.show()
@@ -143,32 +145,39 @@ class Ising(object):
         Et = 0
         Mt = 0
         for i in range(0,n):
-            # if method == 'G' or 'Glauber':
-            #     I = Glauber(N,p,temps[i])
-            # elif method == 'K' or 'Kawasaki':
-            #     I = Kawasaki(N,p,temps[i])
             I = cls(N,p,temps[i])
+
             C,X,E,M,Et,Mt,E2,M2 = I.simulate(10000)
             Es[i] = E
             Ms[i] = M
-            Cs[i] = C#E2-Et*2
-            Xs[i] = X#M2-Mt*2
+            Cs[i] = C
+            Xs[i] = X
+
+
+
         plt.plot(Ms)
 
-        np.savetxt('heatcapacity.csv',Cs,delimiter=',')
-        np.savetxt('energy.csv',Es,delimiter=',')
-        np.savetxt('temperatures.csv',temps,delimiter=',')
-        np.savetxt('mag.csv',Ms,delimiter=',')
-        np.savetxt('magsep.csv',Xs,delimiter=',')
+        np.savetxt('heatcapacity.{}.csv'.format(cls.__name__),Cs,delimiter=',')
+        np.savetxt('energy.{}.csv'.format(cls.__name__),Es,delimiter=',')
+        np.savetxt('mag.{}.csv'.format(cls.__name__),Ms,delimiter=',')
+        np.savetxt('magsep.{}.csv'.format(cls.__name__),Xs,delimiter=',')
+
+        tempsN = np.append(temps,[N])
+
+
+        np.savetxt('temperatures{}.csv'.format(cls.__name__),tempsN,delimiter=',')
 
     @classmethod
     def plots(cls):
-        C = np.genfromtxt('heatcapacity.csv', delimiter=",")
-        E = np.genfromtxt('energy.csv', delimiter=",")
-        T = np.genfromtxt('temperatures.csv', delimiter=",")
-        M = np.genfromtxt('mag.csv', delimiter=",")
-        X = np.genfromtxt('magsep.csv', delimiter=",")
+        C = np.genfromtxt('heatcapacity.{}.csv'.format(cls.__name__), delimiter=",")
+        E = np.genfromtxt('energy.{}.csv'.format(cls.__name__), delimiter=",")
+        TN = np.genfromtxt('temperatures{}.csv'.format(cls.__name__).format(cls.__name__), delimiter=",")
+        N=int(TN[-1])
+        T = TN[0:np.size(TN)-1]
+        M = np.genfromtxt('mag.{}.csv'.format(cls.__name__), delimiter=",")
+        X = np.genfromtxt('magsep.{}.csv'.format(cls.__name__), delimiter=",")
         f = plt.figure(figsize=(18, 10))
+        plt.title("{}*{} Ising Model using {} dynamics".format(N,N,cls.__name__))
 
         sp =  f.add_subplot(2, 2, 1 );
         plt.scatter(T,E)
@@ -183,14 +192,14 @@ class Ising(object):
         plt.ylabel("Specific Heat ", fontsize=20);         plt.axis('tight');
 
         sp =  f.add_subplot(2, 2, 3 );
-        plt.scatter(T,abs(M))
-        plt.plot(T,abs(M))
+        plt.scatter(T,abs(M),color='r')
+        plt.plot(T,abs(M),color='r')
         plt.xlabel("Temperature (T)", fontsize=20);
         plt.ylabel("Magnetization ", fontsize=20);         plt.axis('tight');
 
         sp =  f.add_subplot(2, 2, 4 );
-        plt.scatter(T,abs(X))
-        plt.plot(T,abs(X))
+        plt.scatter(T,abs(X),color='r')
+        plt.plot(T,abs(X),color='r')
         plt.xlabel("Temperature (T)", fontsize=20);
         plt.ylabel("Susceptibility", fontsize=20);         plt.axis('tight');
 
@@ -261,12 +270,13 @@ class Kawasaki(Ising):
         else:
             return 0
 def main():
+
     #I = Glauber(10,0.5,1)
     #I = Kawasaki(50,0.5,10)
     #I.simulate(10000,True)
 
-    #Kawasaki.experiment(50,0.5,20)
-    #Kawasaki.plots()
+    # Kawasaki.experiment(10,0.5,20)
+    # Kawasaki.plots()
 
     Glauber.experiment(10,0.5,20)
     Glauber.plots()
