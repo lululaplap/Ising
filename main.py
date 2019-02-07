@@ -6,6 +6,7 @@ from itertools import permutations
 import matplotlib.pyplot as plt
 import time
 import math
+import sys
 
 
 class Ising(object):
@@ -13,12 +14,14 @@ class Ising(object):
     def __init__(self, N,p,T,config='random'):
         self.N = N
         self.p = p
-        if type(config) == 'numpy.ndarray':
-            self.spins = config
-        elif config == 'random':
-            self.spins = np.random.choice(a=[-1,1], size=(N, N), p=[p, 1-p])
 
-        self.spins = config
+        if config == 'random':
+            self.spins = np.random.choice(a=[-1,1], size=(N, N), p=[p, 1-p])
+        # if type(config) == 'numpy.ndarray':
+        else:
+            self.spins = config
+
+        #self.spins = config
         self.T = T
 
 
@@ -28,47 +31,8 @@ class Ising(object):
         dE = 2*self.spins[pos[0],pos[1]]*NNSpins
         return dE
 
-    # def Gflip(self):
-    #     print("hello")
-    #     x = np.random.randint(0,self.N)
-    #     y = np.random.randint(0,self.N)
-    #     E = self.getEnergyChange([x,y])
-    #     if E<=0:
-    #         self.spins[x,y]*=-1
-    #         return E
-    #     elif np.random.uniform(0,1)< np.exp(-E/self.T):
-    #         self.spins[x,y]*=-1
-    #         return E
-    #     else:
-    #         return 0
-
-
-    # def Kflip(self):
-    #     x1,y1,y2,x2=0,0,0,0
-    #     while not(x1==x2 and y1==y2) and not(self.spins[x1,y1]== self.spins[x2,y2]):
-    #         x1 = np.random.randint(0,self.N)
-    #         y1 = np.random.randint(0,self.N)
-    #         x2 = np.random.randint(0,self.N)
-    #         y2 = np.random.randint(0,self.N)
-    #
-    #     E1 = self.getEnergyChange([x1,y1])
-    #     E2 = self.getEnergyChange([x2,y2])
-    #     E = E1+E2
-    #
-    #     if (abs(x1-x2)==1 or abs(y1-y2)==1 or (x1+x2)%self.N == 1 or (y1+y2)%self.N==1):
-    #         E = 4
-    #
-    #     if E<=0:
-    #         self.spins[x1,y1] = self.spins[x2,y2]
-    #         return E
-    #     elif np.random.uniform(0,1)< np.exp(-E/self.T):
-    #         self.spins[x2,y2] = self.spins[x1,y1]
-    #         return E
-    #     else:
-    #         return 0
     def flip(self):
         pass
-
 
     def sweep(self):
         dE = 0
@@ -269,17 +233,32 @@ class Kawasaki(Ising):
             return E
         else:
             return 0
-def main():
+def main(argv):
+    try:
+        animate = argv[2]
 
-    #I = Glauber(10,0.5,1)
-    #I = Kawasaki(50,0.5,10)
-    #I.simulate(10000,True)
+        N = int(argv[3])
+        Tn = int(argv[4])
+        if argv[1] == 'G' or argv[1] =='Glauber' or argv[1] =='B':
+            if animate=='True':
+                I = Glauber(N,0.5,T,config='random')
+                I.simulate(10000,True)
+            else:
+                Glauber.experiment(N,0.5,Tn)
+                Glauber.plots()
+        if argv[1] == 'K' or argv[1] == 'Kawasaki' or argv[1] =='B':
+            if animate=='True':
+                I = Kawasaki(N,0.5,T,config='random')
+                I.simulate(10000,True)
+            else:
+                Kawasaki.experiment(N,0.5,Tn)
+                Kawasaki.plots()
+        # else:
+        #     print("Input format: [dynamics: 'G', 'K'],[animate: True, False] ,[N: int], [T: float]")
+        #     quit()
 
-    # Kawasaki.experiment(10,0.5,20)
-    # Kawasaki.plots()
-
-    Glauber.experiment(10,0.5,20)
-    Glauber.plots()
-
-
-main()
+    except ValueError:
+        print("Input format: [dynamics: 'G', 'K', 'B'],[animate: True, False] ,[N: int], [Tn: int]")
+        quit()
+        
+main(sys.argv)
