@@ -56,10 +56,10 @@ class Ising(object):
         self.equ(100)
         print(self.T)
         Es = np.zeros(n/10,dtype=float)
-        #Es[0] = self.totalEnergy()
-        Ms = np.zeros(n,dtype=float)
-        #Ms[0] = self.totalM()
-        for i in range(0,n):
+        Es[0] = self.totalEnergy()
+        Ms = np.zeros(n/10,dtype=float)
+        Ms[0] = self.totalM()
+        for i in range(1,n):
             self.sweep()
             if i%10==0:
                 Es[i/10] = self.totalEnergy()
@@ -153,22 +153,19 @@ class Ising(object):
         plt.ylabel("Energy ", fontsize=20);         plt.axis('tight');
 
         sp =  f.add_subplot(2, 2, 2 );
-        plt.scatter(T,C[:,0])
-        plt.plot(T,C[:,0])
-        plt.errorbar(T,C[:,0],yerr=C[:,1])
+
         plt.xlabel("Temperature (T)", fontsize=20);
         plt.ylabel("Specific Heat ", fontsize=20);         plt.axis('tight');
 
         sp =  f.add_subplot(2, 2, 3 );
         plt.scatter(T,abs(M[:,0]),color='r')
         plt.plot(T,abs(M[:,0]),color='r')
-
         plt.xlabel("Temperature (T)", fontsize=20);
         plt.ylabel("Magnetization ", fontsize=20);         plt.axis('tight');
 
         sp =  f.add_subplot(2, 2, 4 );
-        plt.scatter(T,abs(X[:,0]),color='r')
-        plt.plot(T,abs(X[:,0]),color='r')
+        plt.scatter(T,X[:,0])
+        plt.plot(T,X[:,0])
         plt.errorbar(T,X[:,0],yerr=X[:,1])
         plt.xlabel("Temperature (T)", fontsize=20);
         plt.ylabel("Susceptibility", fontsize=20);         plt.axis('tight');
