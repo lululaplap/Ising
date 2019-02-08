@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import time
 import math
 import sys
+import datetime
 
 
 class Ising(object):
@@ -57,22 +58,18 @@ class Ising(object):
         self.equ(100)
         print(self.T)
         Es = np.zeros(n/10,dtype=float)
-        Es[0] = self.totalEnergy()
+        #Es[0] = self.totalEnergy()
         Ms = np.zeros(n,dtype=float)
-        Ms[0] = self.totalM()
-        Et = 0
-        Mt = 0
-        E2 = 0
-        M2 = 0
-        for i in range(1,n):
+        #Ms[0] = self.totalM()
+        for i in range(0,n):
             self.sweep()
             if i%10==0:
                 Es[i/10] = self.totalEnergy()
                 Ms[i/10] = self.totalM()
-                Et += Es[i/10]
-                Mt += Ms[i/10]
-                E2 += Es[i/10]**2
-                M2 += Ms[i/10]**2
+                # Et += Es[i/10]
+                # Mt += Ms[i/10]
+                # E2 += Es[i/10]**2
+                # M2 += Ms[i/10]**2
                 if animate==True:
                     #print(i)
                     plt.imshow(self.spins)
@@ -85,7 +82,10 @@ class Ising(object):
         X = np.var(Ms)/(self.N**2*self.T)
         E = np.mean(Es)
         M=  np.mean(Ms)
-        return [C,X,E,M,Et,Mt,E2,M2]
+        values = [E,M,C,X]
+        errors = [0,0,Ising.errors(Es,5),Ising.errors(Es,5)]
+
+        return [values,errors]
 
 
 
@@ -102,73 +102,89 @@ class Ising(object):
     def experiment(cls,N,p,n):
 
         temps = np.linspace(1.5,3,n)
-        Cs = np.zeros(n)
-        Xs = np.zeros(n)
-        Es = np.zeros(n)
-        Ms = np.zeros(n)
-        Et = 0
-        Mt = 0
+        Cs = np.zeros((n,2))
+        Xs = np.zeros((n,2))
+        Es = np.zeros((n,2))
+        Ms = np.zeros((n,2))
         for i in range(0,n):
             I = cls(N,p,temps[i])
 
-            C,X,E,M,Et,Mt,E2,M2 = I.simulate(10000)
-            Es[i] = E
-            Ms[i] = M
-            Cs[i] = C
-            Xs[i] = X
+            [values,errors] = I.simulate(10000)
 
+            Es[i,0],Es[i,1] = values[0], errors[0]
+            Ms[i,0],Ms[i,1] = values[1], errors[1]
+            Cs[i,0],Cs[i,1] = values[2], errors[2]
+            Xs[i,0],Xs[i,1] = values[3], errors[3]
 
+        # t = datetime.datetime.now()
+        # np.savetxt('heatcapacity.{}.{}.csv'.format(cls.__name__,t),Cs,delimiter=',')
+        # np.savetxt('energy.{}.{}.csv'.format(cls.__name__,t),Es,delimiter=',')
+        # np.savetxt('mag.{}.{}.csv'.format(cls.__name__,t),Ms,delimiter=',')
+        # np.savetxt('magsep.{}.{}.csv'.format(cls.__name__,t),Xs,delimiter=',')
 
-        plt.plot(Ms)
-
-        np.savetxt('heatcapacity.{}.csv'.format(cls.__name__),Cs,delimiter=',')
-        np.savetxt('energy.{}.csv'.format(cls.__name__),Es,delimiter=',')
-        np.savetxt('mag.{}.csv'.format(cls.__name__),Ms,delimiter=',')
-        np.savetxt('magsep.{}.csv'.format(cls.__name__),Xs,delimiter=',')
+        t = ''#datetime.datetime.now()
+        np.savetxt('./data/heatcapacity.{}.{}csv'.format(cls.__name__,t),Cs,delimiter=',')
+        np.savetxt('./data/energy.{}.{}csv'.format(cls.__name__,t),Es,delimiter=',')
+        np.savetxt('./data/mag.{}.{}csv'.format(cls.__name__,t),Ms,delimiter=',')
+        np.savetxt('./data/magsep.{}.{}csv'.format(cls.__name__,t),Xs,delimiter=',')
 
         tempsN = np.append(temps,[N])
 
 
-        np.savetxt('temperatures{}.csv'.format(cls.__name__),tempsN,delimiter=',')
+        np.savetxt('./data/temperatures{}.{}csv'.format(cls.__name__,t),tempsN,delimiter=',')
 
     @classmethod
     def plots(cls):
-        C = np.genfromtxt('heatcapacity.{}.csv'.format(cls.__name__), delimiter=",")
-        E = np.genfromtxt('energy.{}.csv'.format(cls.__name__), delimiter=",")
-        TN = np.genfromtxt('temperatures{}.csv'.format(cls.__name__).format(cls.__name__), delimiter=",")
+        C = np.genfromtxt('./data/heatcapacity.{}.csv'.format(cls.__name__), delimiter=",").reshape(2,-1)
+        E = np.genfromtxt('./data/energy.{}.csv'.format(cls.__name__), delimiter=",").reshape(2,-1)
+        TN = np.genfromtxt('./data/temperatures{}.csv'.format(cls.__name__).format(cls.__name__), delimiter=",")
         N=int(TN[-1])
         T = TN[0:np.size(TN)-1]
-        M = np.genfromtxt('mag.{}.csv'.format(cls.__name__), delimiter=",")
-        X = np.genfromtxt('magsep.{}.csv'.format(cls.__name__), delimiter=",")
+        M = np.genfromtxt('./data/mag.{}.csv'.format(cls.__name__), delimiter=",").reshape(2,-1)
+        X = np.genfromtxt('./data/magsep.{}.csv'.format(cls.__name__), delimiter=",").reshape(2,-1)
         f = plt.figure(figsize=(18, 10))
         plt.title("{}*{} Ising Model using {} dynamics".format(N,N,cls.__name__))
-
+        print(np.size(E[0,:]))
+        print(np.size(T))
         sp =  f.add_subplot(2, 2, 1 );
-        plt.scatter(T,E)
-        plt.plot(T,E)
+        plt.scatter(T,E[0,:])
+        plt.plot(T,E[0,:])
+
         plt.xlabel("Temperature (T)", fontsize=20);
         plt.ylabel("Energy ", fontsize=20);         plt.axis('tight');
 
         sp =  f.add_subplot(2, 2, 2 );
-        plt.scatter(T,C)
-        plt.plot(T,C)
+        plt.scatter(T,C[0,:])
+        plt.plot(T,C[0,:])
+        plt.errorbar(T,C[0,:],yerr=C[1,:])
         plt.xlabel("Temperature (T)", fontsize=20);
         plt.ylabel("Specific Heat ", fontsize=20);         plt.axis('tight');
 
         sp =  f.add_subplot(2, 2, 3 );
-        plt.scatter(T,abs(M),color='r')
-        plt.plot(T,abs(M),color='r')
+        plt.scatter(T,abs(M[0,:]),color='r')
+        plt.plot(T,abs(M[0,:]),color='r')
+
         plt.xlabel("Temperature (T)", fontsize=20);
         plt.ylabel("Magnetization ", fontsize=20);         plt.axis('tight');
 
         sp =  f.add_subplot(2, 2, 4 );
-        plt.scatter(T,abs(X),color='r')
-        plt.plot(T,abs(X),color='r')
+        plt.scatter(T,abs(X[0,:]),color='r')
+        plt.plot(T,abs(X[0,:]),color='r')
+        plt.errorbar(T,X[0,:],yerr=X[1,:])
         plt.xlabel("Temperature (T)", fontsize=20);
         plt.ylabel("Susceptibility", fontsize=20);         plt.axis('tight');
 
         plt.show()
-        plt.savefig('{}.png'.format(cls))
+        f.savefig('{}.png'.format(cls.__name__))
+
+    @staticmethod
+    def errors(data,n):
+        samps = np.zeros(np.size(data)).reshape(n,-1)
+        for i in range(0,n):
+            samps[i] = data[i::n]
+        x = np.mean(np.var(samps,axis=1))
+        x2 = np.mean(np.var(samps**2,axis=1))
+        return(np.sqrt(x2-x**2))
 
 class Glauber(Ising):
     def __init__(self,N,p,T,config='default'):
@@ -234,31 +250,34 @@ class Kawasaki(Ising):
         else:
             return 0
 def main(argv):
-    try:
-        animate = argv[2]
-
-        N = int(argv[3])
-        Tn = int(argv[4])
-        if argv[1] == 'G' or argv[1] =='Glauber' or argv[1] =='B':
-            if animate=='True':
-                I = Glauber(N,0.5,T,config='random')
-                I.simulate(10000,True)
-            else:
-                Glauber.experiment(N,0.5,Tn)
-                Glauber.plots()
-        if argv[1] == 'K' or argv[1] == 'Kawasaki' or argv[1] =='B':
-            if animate=='True':
-                I = Kawasaki(N,0.5,T,config='random')
-                I.simulate(10000,True)
-            else:
-                Kawasaki.experiment(N,0.5,Tn)
-                Kawasaki.plots()
+    #try:
+    animate = argv[2]
+    N = int(argv[3])
+    Tn = int(argv[4])
+    if argv[1] == 'G' or argv[1] =='Glauber' or argv[1] =='B':
+        if animate=='True':
+            I = Glauber(N,0.5,T,config='random')
+            I.simulate(10000,True)
+        else:
+            Glauber.experiment(N,0.5,Tn)
+            Glauber.plots()
+    if argv[1] == 'K' or argv[1] == 'Kawasaki' or argv[1] =='B':
+        if animate=='True':
+            I = Kawasaki(N,0.5,T,config='random')
+            I.simulate(10000,True)
+        else:
+            Kawasaki.experiment(N,0.5,Tn)
+            Kawasaki.plots()
         # else:
         #     print("Input format: [dynamics: 'G', 'K'],[animate: True, False] ,[N: int], [T: float]")
         #     quit()
 
-    except ValueError:
-        print("Input format: [dynamics: 'G', 'K', 'B'],[animate: True, False] ,[N: int], [Tn: int]")
-        quit()
-        
+    #
+
 main(sys.argv)
+
+# def main():
+#     I = Ising(10,0.5,10)
+#     print(I.errors(np.arange(0,100),10))
+#
+# main()
