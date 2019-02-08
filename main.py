@@ -25,8 +25,6 @@ class Ising(object):
         #self.spins = config
         self.T = T
 
-
-
     def getEnergyChange(self,pos):
         NNSpins = self.spins[(pos[0]+1)%self.N,pos[1]]+self.spins[pos[0],(pos[1]+1)%self.N]+self.spins[(pos[0]-1)%self.N,pos[1]]+self.spins[pos[0],(pos[1]-1)%self.N]
         dE = 2*self.spins[pos[0],pos[1]]*NNSpins
@@ -77,13 +75,14 @@ class Ising(object):
 
         #if animate==True:
         plt.show()
-
-        C = np.var(Es)/(self.N**2*self.T**2)
-        X = np.var(Ms)/(self.N**2*self.T)
+        k1 = (self.N**2*self.T**2)
+        k2 = (self.N**2*self.T)
+        C = np.var(Es)/k1
+        X = np.var(Ms)/k2
         E = np.mean(Es)
         M=  np.mean(Ms)
         values = [E,M,C,X]
-        errors = [0,0,Ising.errors(Es,5),Ising.errors(Es,5)]
+        errors = [np.std(E)/np.size(E),np.std(M)/np.size(M),Ising.errors(Es,5,k1),Ising.errors(Ms,5,k2)]
 
         return [values,errors]
 
@@ -135,42 +134,42 @@ class Ising(object):
 
     @classmethod
     def plots(cls):
-        C = np.genfromtxt('./data/heatcapacity.{}.csv'.format(cls.__name__), delimiter=",").reshape(2,-1)
-        E = np.genfromtxt('./data/energy.{}.csv'.format(cls.__name__), delimiter=",").reshape(2,-1)
+        C = np.genfromtxt('./data/heatcapacity.{}.csv'.format(cls.__name__), delimiter=",").reshape(-1,2)
+        print(C)
+        E = np.genfromtxt('./data/energy.{}.csv'.format(cls.__name__), delimiter=",").reshape(-1,2)
         TN = np.genfromtxt('./data/temperatures{}.csv'.format(cls.__name__).format(cls.__name__), delimiter=",")
         N=int(TN[-1])
         T = TN[0:np.size(TN)-1]
-        M = np.genfromtxt('./data/mag.{}.csv'.format(cls.__name__), delimiter=",").reshape(2,-1)
-        X = np.genfromtxt('./data/magsep.{}.csv'.format(cls.__name__), delimiter=",").reshape(2,-1)
+        M = np.genfromtxt('./data/mag.{}.csv'.format(cls.__name__), delimiter=",").reshape(-1,2)
+        X = np.genfromtxt('./data/magsep.{}.csv'.format(cls.__name__), delimiter=",").reshape(-1,2)
         f = plt.figure(figsize=(18, 10))
         plt.title("{}*{} Ising Model using {} dynamics".format(N,N,cls.__name__))
-        print(np.size(E[0,:]))
-        print(np.size(T))
+
         sp =  f.add_subplot(2, 2, 1 );
-        plt.scatter(T,E[0,:])
-        plt.plot(T,E[0,:])
+        plt.scatter(T,E[:,0])
+        plt.plot(T,E[:,0])
 
         plt.xlabel("Temperature (T)", fontsize=20);
         plt.ylabel("Energy ", fontsize=20);         plt.axis('tight');
 
         sp =  f.add_subplot(2, 2, 2 );
-        plt.scatter(T,C[0,:])
-        plt.plot(T,C[0,:])
-        plt.errorbar(T,C[0,:],yerr=C[1,:])
+        plt.scatter(T,C[:,0])
+        plt.plot(T,C[:,0])
+        plt.errorbar(T,C[:,0],yerr=C[:,1])
         plt.xlabel("Temperature (T)", fontsize=20);
         plt.ylabel("Specific Heat ", fontsize=20);         plt.axis('tight');
 
         sp =  f.add_subplot(2, 2, 3 );
-        plt.scatter(T,abs(M[0,:]),color='r')
-        plt.plot(T,abs(M[0,:]),color='r')
+        plt.scatter(T,abs(M[:,0]),color='r')
+        plt.plot(T,abs(M[:,0]),color='r')
 
         plt.xlabel("Temperature (T)", fontsize=20);
         plt.ylabel("Magnetization ", fontsize=20);         plt.axis('tight');
 
         sp =  f.add_subplot(2, 2, 4 );
-        plt.scatter(T,abs(X[0,:]),color='r')
-        plt.plot(T,abs(X[0,:]),color='r')
-        plt.errorbar(T,X[0,:],yerr=X[1,:])
+        plt.scatter(T,abs(X[:,0]),color='r')
+        plt.plot(T,abs(X[:,0]),color='r')
+        plt.errorbar(T,X[:,0],yerr=X[:,1])
         plt.xlabel("Temperature (T)", fontsize=20);
         plt.ylabel("Susceptibility", fontsize=20);         plt.axis('tight');
 
@@ -178,12 +177,12 @@ class Ising(object):
         f.savefig('{}.png'.format(cls.__name__))
 
     @staticmethod
-    def errors(data,n):
+    def errors(data,n,k):
         samps = np.zeros(np.size(data)).reshape(n,-1)
         for i in range(0,n):
             samps[i] = data[i::n]
-        x = np.mean(np.var(samps,axis=1))
-        x2 = np.mean(np.var(samps**2,axis=1))
+        x = np.mean(np.var(samps,axis=1)/k)
+        x2 = np.mean((np.var(samps,axis=1)/k)**2)
         return(np.sqrt(x2-x**2))
 
 class Glauber(Ising):
@@ -257,16 +256,16 @@ def main(argv):
     if argv[1] == 'G' or argv[1] =='Glauber' or argv[1] =='B':
         if animate=='True':
             I = Glauber(N,0.5,T,config='random')
-            I.simulate(10000,True)
+            I.simulate(1000,True)
         else:
             Glauber.experiment(N,0.5,Tn)
             Glauber.plots()
     if argv[1] == 'K' or argv[1] == 'Kawasaki' or argv[1] =='B':
         if animate=='True':
             I = Kawasaki(N,0.5,T,config='random')
-            I.simulate(10000,True)
+            I.simulate(1000,True)
         else:
-            Kawasaki.experiment(N,0.5,Tn)
+            #Kawasaki.experiment(N,0.5,Tn)
             Kawasaki.plots()
         # else:
         #     print("Input format: [dynamics: 'G', 'K'],[animate: True, False] ,[N: int], [T: float]")
@@ -275,9 +274,3 @@ def main(argv):
     #
 
 main(sys.argv)
-
-# def main():
-#     I = Ising(10,0.5,10)
-#     print(I.errors(np.arange(0,100),10))
-#
-# main()
