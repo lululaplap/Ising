@@ -4,10 +4,14 @@
 import numpy as np
 from itertools import permutations
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+
 import time
 import math
 import sys
 import datetime
+fig = plt.figure()
+ax = fig.add_subplot(1,1,1)
 
 
 class Ising(object):
@@ -15,9 +19,9 @@ class Ising(object):
     def __init__(self, N,p,T,config='random'):
         self.N = N
         self.p = p
-
+        q = (1-p)/2
         if config == 'random':
-            self.spins = np.random.choice(a=[-1,1], size=(N, N), p=[p, 1-p])
+            self.spins = np.random.choice(a=[-1,1], size=(N, N), p=[p,1-p])
         # if type(config) == 'numpy.ndarray':
         else:
             self.spins = config
@@ -37,6 +41,7 @@ class Ising(object):
         dE = 0
         for i in range(0,self.N**2):
             dE += self.flip()
+            
 
         return dE
 
@@ -46,11 +51,16 @@ class Ising(object):
             for j in range(self.N):
                 pos = [i,j]
                 E += self.spins[i,j]*(self.spins[(pos[0]+1)%self.N,pos[1]]+self.spins[pos[0],(pos[1]+1)%self.N]+self.spins[(pos[0]-1)%self.N,pos[1]]+self.spins[pos[0],(pos[1]-1)%self.N])
-        return -1*E/4
+        return -1*E/2
 
     def equ(self,equN):
         for i in range(0,equN):
             self.sweep()
+    def aniUpdate(self,i):
+        for i in range(10):
+            self.sweep()
+        ax.clear()
+        ax.imshow(self.spins,cmap='cool')
 
     def simulate(self,n,animate=False):
         self.equ(100)
@@ -59,22 +69,14 @@ class Ising(object):
         Es[0] = self.totalEnergy()
         Ms = np.zeros(n/10,dtype=float)
         Ms[0] = self.totalM()
-        for i in range(1,n):
-            self.sweep()
-            if i%10==0:
-                Es[i/10] = self.totalEnergy()
-                Ms[i/10] = self.totalM()
-                # Et += Es[i/10]
-                # Mt += Ms[i/10]
-                # E2 += Es[i/10]**2
-                # M2 += Ms[i/10]**2
-                if animate==True:
-                    #print(i)
-                    plt.imshow(self.spins)
-                    plt.pause(0.005)
+        m=10
+        for i in range(1,int(n/m)):
+            for j in range(m):
+                self.sweep()
 
-        #if animate==True:
-        plt.show()
+            Es[i] = self.totalEnergy()
+            Ms[i] = self.totalM()
+
         k1 = (self.N**2*self.T**2)
         k2 = (self.N**2*self.T)
         C = np.var(Es)/k1
@@ -82,7 +84,7 @@ class Ising(object):
         E = np.mean(Es)
         M=  np.mean(Ms)
         values = [E,M,C,X]
-        errors = [np.std(E)/np.size(E),np.std(M)/np.size(M),Ising.errors(Es,5,k1),Ising.errors(Ms,5,k2)]
+        errors = [np.std(E)/np.size(E),np.std(abs(M))/np.size(M),Ising.errors(Es,5,k1),Ising.errors(Ms,5,k2)]
 
         return [values,errors]
 
@@ -148,25 +150,28 @@ class Ising(object):
         sp =  f.add_subplot(2, 2, 1 );
         plt.scatter(T,E[:,0])
         plt.plot(T,E[:,0])
-
+        plt.errorbar(T,E[:,0],yerr=E[:,1],fmt='-b')
         plt.xlabel("Temperature (T)", fontsize=20);
         plt.ylabel("Energy ", fontsize=20);         plt.axis('tight');
 
         sp =  f.add_subplot(2, 2, 2 );
-
+        plt.scatter(T,C[:,0])
+        plt.plot(T,C[:,0])
+        plt.errorbar(T,C[:,0],yerr=C[:,1],fmt='-b')
         plt.xlabel("Temperature (T)", fontsize=20);
         plt.ylabel("Specific Heat ", fontsize=20);         plt.axis('tight');
 
         sp =  f.add_subplot(2, 2, 3 );
         plt.scatter(T,abs(M[:,0]),color='r')
         plt.plot(T,abs(M[:,0]),color='r')
+        plt.errorbar(T,abs(M[:,0]),yerr=M[:,1],fmt='-r')
         plt.xlabel("Temperature (T)", fontsize=20);
         plt.ylabel("Magnetization ", fontsize=20);         plt.axis('tight');
 
         sp =  f.add_subplot(2, 2, 4 );
         plt.scatter(T,X[:,0])
         plt.plot(T,X[:,0])
-        plt.errorbar(T,X[:,0],yerr=X[:,1])
+        plt.errorbar(T,X[:,0],yerr=X[:,1],fmt='-r')
         plt.xlabel("Temperature (T)", fontsize=20);
         plt.ylabel("Susceptibility", fontsize=20);         plt.axis('tight');
 
@@ -233,7 +238,7 @@ class Kawasaki(Ising):
         S2 = self.spins[x2,y2]
 
         if (abs(x1-x2)==1 or abs(y1-y2)==1 or (x1+x2)%self.N == 1 or (y1+y2)%self.N==1):
-            E -= 1
+            E += 4
         if E<0:
             self.spins[x1,y1] = S2
             self.spins[x2,y2] = S1
@@ -249,20 +254,24 @@ def main(argv):
     #try:
     animate = argv[2]
     N = int(argv[3])
-    Tn = int(argv[4])
+    Tn = float(argv[4])
+    #p=float(argv[5])
     if argv[1] == 'G' or argv[1] =='Glauber' or argv[1] =='B':
         if animate=='True':
-            I = Glauber(N,0.5,T,config='random')
-            I.simulate(1000,True)
+            I = Glauber(N,0.5,Tn,config='random')
+            #I.simulate(1000,True)
+            ani = animation.FuncAnimation(fig, I.aniUpdate)
+            plt.show()
         else:
-            Glauber.experiment(N,0.5,Tn)
+            Glauber.experiment(N,0.5,10)
             Glauber.plots()
     if argv[1] == 'K' or argv[1] == 'Kawasaki' or argv[1] =='B':
         if animate=='True':
-            I = Kawasaki(N,0.5,T,config='random')
-            I.simulate(1000,True)
+            I = Kawasaki(N,0.5,Tn,config='random')
+            ani = animation.FuncAnimation(fig, I.aniUpdate)
+            plt.show()
         else:
-            #Kawasaki.experiment(N,0.5,Tn)
+            Kawasaki.experiment(N,0.5,10)
             Kawasaki.plots()
         # else:
         #     print("Input format: [dynamics: 'G', 'K'],[animate: True, False] ,[N: int], [T: float]")
